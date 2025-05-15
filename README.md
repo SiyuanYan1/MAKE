@@ -1,14 +1,10 @@
 # MAKE: Multi-Aspect Knowledge-Enhanced Vision-Language Pretraining for Zero-shot Dermatological Assessment
 
-![GitHub stars](https://img.shields.io/github/stars/SiyuanYan1/MAKE?style=social)
-![GitHub forks](https://img.shields.io/github/forks/SiyuanYan1/MAKE?style=social)
-![License](https://img.shields.io/badge/License-MIT-blue)
-
 ## Resources
 
 - 📦 **Code and pretrained model** will be released in this repository
-- 🔍 **Pretraining data** available at [Derm1M Repository](https://github.com/SiyuanYan1/Derm1M)
-- 🧠 **Vision encoder foundation model** available at [PanDerm Repository](https://github.com/SiyuanYan1/PanDerm)
+- 🔍 **Pretraining data** will be available at [Derm1M Repository](https://github.com/SiyuanYan1/Derm1M)
+- 🧠 **Dermatology-specific vision encoder (PanDerm-base)** can be found at [PanDerm Repository](https://github.com/SiyuanYan1/PanDerm)
 
 
 ## Citation
