@@ -1,8 +1,11 @@
 # MAKE 
 Multi-Aspect Knowledge-Enhanced Vision-Language Pretraining for Zero-shot Dermatological Assessment
 
-The pretraining data will be available at https://github.com/SiyuanYan1/Derm1M.
+Resources
 
+📦 Code and pretrained model will be released in this repository
+🔍 Pretraining data available at Derm1M Repository
+🧠 Vision encoder foundation model available at PanDerm Repository
 
 ## Citation
 ```bibtex
@@ -23,5 +26,14 @@ The pretraining data will be available at https://github.com/SiyuanYan1/Derm1M.
       archivePrefix={arXiv},
       primaryClass={cs.CV},
       url={https://arxiv.org/abs/2503.14911}, 
+}
+@misc{yan2025multimodalvisionfoundationmodel,
+      title={A Multimodal Vision Foundation Model for Clinical Dermatology}, 
+      author={Siyuan Yan and Zhen Yu and Clare Primiero and Cristina Vico-Alonso and Zhonghua Wang and Litao Yang and Philipp Tschandl and Ming Hu and Lie Ju and Gin Tan and Vincent Tang and Aik Beng Ng and David Powell and Paul Bonnington and Simon See and Elisabetta Magnaterra and Peter Ferguson and Jennifer Nguyen and Pascale Guitera and Jose Banuls and Monika Janda and Victoria Mar and Harald Kittler and H. Peter Soyer and Zongyuan Ge},
+      year={2025},
+      eprint={2410.15038},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2410.15038}, 
 }
 ```
