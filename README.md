@@ -1,4 +1,4 @@
-# MAKE: Multi-Aspect Knowledge-Enhanced Vision-Language Pretraining for Zero-shot Dermatological Assessment [MICCAI 2025 Early Accept]
+# [MICCAI 2025] MAKE: Multi-Aspect Knowledge-Enhanced Vision-Language Pretraining for Zero-shot Dermatological Assessment 
 
 ## Abstract
 
