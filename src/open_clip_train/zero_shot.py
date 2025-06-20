@@ -2,10 +2,7 @@ import logging
 
 import torch
 
-from open_clip import get_input_dtype, get_tokenizer, build_zero_shot_classifier, \
-    IMAGENET_CLASSNAMES, OPENAI_IMAGENET_TEMPLATES
 from open_clip_train.precision import get_autocast
-
 from open_clip import get_input_dtype, get_tokenizer, build_zero_shot_classifier, \
     OPENAI_SKIN_TEMPLATES,PAD_CLASSNAMES, \
     SNU_134_CLASSNAMES, SD_128_CLASSNAMES, F17K_DISEASE_113_CLASSES
@@ -13,6 +10,7 @@ from open_clip import get_input_dtype, get_tokenizer, build_zero_shot_classifier
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score, f1_score, accuracy_score, top_k_accuracy_score
 import numpy as np
+from tqdm import tqdm
 
 
 def accuracy(output, target, topk=(1,)):
@@ -35,7 +33,7 @@ def run(model, classifier, dataloader, num_class, args, metric='f1'):
         targets_one_hot = []
         predictions_probs = []
 
-        for images, target in dataloader:
+        for images, target in tqdm(dataloader):
             images = images.to(device=device, dtype=input_dtype)
             target = target.to(device)
             true_labels = target.to(torch.int64)
@@ -111,7 +109,7 @@ def zero_shot_eval(model, data, epoch, args, tokenizer=None):
             templates=templates,
             num_classes_per_batch=10,
             device=args.device,
-            use_tqdm=False,
+            use_tqdm=True,
         )
 
         classifier_f17k_113_disease = build_zero_shot_classifier(
@@ -121,7 +119,7 @@ def zero_shot_eval(model, data, epoch, args, tokenizer=None):
             templates=templates,
             num_classes_per_batch=10,
             device=args.device,
-            use_tqdm=False,
+            use_tqdm=True,
         )
 
         classifier_SNU_134 = build_zero_shot_classifier(
@@ -131,7 +129,7 @@ def zero_shot_eval(model, data, epoch, args, tokenizer=None):
             templates=templates,
             num_classes_per_batch=10,
             device=args.device,
-            use_tqdm=False,
+            use_tqdm=True,
         )
         
         classifier_SD_128 = build_zero_shot_classifier(
@@ -141,7 +139,7 @@ def zero_shot_eval(model, data, epoch, args, tokenizer=None):
             templates=templates,
             num_classes_per_batch=10,
             device=args.device,
-            use_tqdm=False,
+            use_tqdm=True,
         )
 
     logging.info('Using classifier')
