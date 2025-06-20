@@ -1,0 +1,4 @@
+data/
+model_weight/
+logs/
+__pycache__/
