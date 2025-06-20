@@ -491,6 +491,9 @@ def parse_args(args):
         help="Path to images to infer",
     )
 
+    parser.add_argument('--k', type=int, default=None,
+                        help="This params is used for single image inference: Print top k disease prediction")
+
     args = parser.parse_args(args)
 
     # If some params are not passed, we use the default values based on model name.

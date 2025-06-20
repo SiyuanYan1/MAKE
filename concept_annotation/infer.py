@@ -1,8 +1,11 @@
 import pyrootutils
 import sys
 import os
-root = pyrootutils.setup_root(os.path.abspath("concept_annotation/experiments/concept-annotation/automatic_concept_annotation.py"), pythonpath=True)
-sys.path.append(str(root))
+
+project_root = os.getcwd()
+src_path = os.path.join(project_root, 'src')
+sys.path.insert(0, project_root)
+sys.path.insert(0, src_path)
 
 from concept_annotation.utils import load_concept_list, concept_mapping, concept_prompt_template_list, concept_prompt_ref_list
 import torch

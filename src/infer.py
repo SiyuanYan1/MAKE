@@ -25,14 +25,9 @@ try:
 except ImportError:
     hvd = None
 
-from open_clip import create_model_and_transforms, trace_model, get_tokenizer, create_loss
-from open_clip_train.data import get_data
-from open_clip_train.distributed import is_master, init_distributed_device, broadcast_object
-from open_clip_train.logger import setup_logging
+from open_clip import create_model_and_transforms, get_tokenizer
+from open_clip_train.distributed import init_distributed_device
 from open_clip_train.params import parse_args
-from open_clip_train.scheduler import cosine_lr, const_lr, const_lr_cooldown
-from open_clip_train.train import train_one_epoch, evaluate
-from open_clip_train.file_utils import pt_load, check_exists, start_sync_process, remote_sync
 
 
 def random_seed(seed=42, rank=0):
@@ -40,9 +35,9 @@ def random_seed(seed=42, rank=0):
     np.random.seed(seed + rank)
     random.seed(seed + rank)
 
-def predict_top10_diseases(image_path, model, classifier, tokenizer, classnames, transforms, device='cpu', args=None):
+def predict_topk_diseases(image_path, model, classifier, tokenizer, classnames, transforms, device='cpu', args=None, k=10):
     """
-    Predict top-5 diseases for a single image
+    Predict top-k diseases for a single image
     
     Args:
         image_path: Path to the input image
@@ -55,7 +50,7 @@ def predict_top10_diseases(image_path, model, classifier, tokenizer, classnames,
         args: Arguments object containing precision settings (optional)
     
     Returns:
-        List of tuples (disease_name, confidence_score) for top-5 predictions
+        List of tuples (disease_name, confidence_score) for top-k predictions
     """
     from PIL import Image
     import torch
@@ -86,29 +81,29 @@ def predict_top10_diseases(image_path, model, classifier, tokenizer, classnames,
             # Get probabilities
             probabilities = torch.softmax(logits, dim=1)
             
-            # Get top-5 predictions
-            top5_probs, top5_indices = torch.topk(probabilities, k=10, dim=1)
+            # Get top-k predictions
+            topk_probs, topk_indices = torch.topk(probabilities, k=k, dim=1)
     
     # Convert to CPU and extract values
-    top5_probs = top5_probs.cpu().numpy()[0]
-    top5_indices = top5_indices.cpu().numpy()[0]
+    topk_probs = topk_probs.cpu().numpy()[0]
+    topk_indices = topk_indices.cpu().numpy()[0]
     
     # Create results list
     results = []
-    for i, (idx, prob) in enumerate(zip(top5_indices, top5_probs)):
+    for i, (idx, prob) in enumerate(zip(topk_indices, topk_probs)):
         disease_name = classnames[idx]
         confidence = float(prob)
         results.append((disease_name, confidence))
     
     return results
 
-def print_top10_predictions(image_path, model, classifier, tokenizer, classnames, transforms, device='cpu', args=None):
+def print_topk_predictions(image_path, model, classifier, tokenizer, classnames, transforms, device='cpu', args=None, k=10):
     """
-    Print top-10 disease predictions for a single image in a formatted way
+    Print top-k disease predictions for a single image in a formatted way
     """
-    predictions = predict_top10_diseases(image_path, model, classifier, tokenizer, classnames, transforms, device, args)
+    predictions = predict_topk_diseases(image_path, model, classifier, tokenizer, classnames, transforms, device, args, k=k)
     
-    print(f"\nTop-10 Disease Predictions for: {image_path}")
+    print(f"\nTop-{k} Disease Predictions for: {image_path}")
     print("-" * 60)
     for i, (disease, confidence) in enumerate(predictions, 1):
         print(f"{i}. {disease:<40} {confidence:.4f} ({confidence*100:.2f}%)")
@@ -190,9 +185,8 @@ def main(args):
     image_path = args.image_path
 
     # Print results nicely
-    print_top10_predictions(image_path, model, classifier_f17k_113_disease, tokenizer, 
-                          F17K_DISEASE_113_CLASSES, preprocess_val, args.device, args)
-    
+    print_topk_predictions(image_path, model, classifier_f17k_113_disease, tokenizer, 
+                          F17K_DISEASE_113_CLASSES, preprocess_val, args.device, args, k=args.k)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
