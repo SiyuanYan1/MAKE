@@ -21,7 +21,7 @@ Dermatological diagnosis represents a complex multimodal challenge that requires
 - [ ] Coming Soon: Guidelines for evaluating MAKE on custom datasets
 - [ ] Within 3 weeks: Training code release
 
-## Environment Preparation
+## ⚙️ Environment Preparation
 Setup conda environment (recommended).
 ```bash
 conda create -n MAKE python=3.9.20
@@ -35,7 +35,7 @@ cd MAKE
 pip install -r requirements.txt
 ```
 
-## Quick start
+## 🚀 Quick start
 Our model is available on Hugging Face for easy access.
 Here we provide a simple example demonstrating zero-shot disease classification using MAKE in just 43 lines of code.
 
@@ -78,9 +78,11 @@ Once downloaded, your project directory should be organized as follows:
 
 ## Evaluation
 
-**Zero-Shot Disease Classification** - Evaluates the model's ability to classify skin diseases without task-specific training, using only natural language descriptions of disease categories.
+### Zero-Shot Disease Classification
+* Evaluates the model's ability to classify skin diseases without task-specific training, using only natural language descriptions of disease categories.
 * Metric: Accuracy
-* Note: We use specialized prompt templates (`OPENAI_SKIN_TEMPLATES` in `src/open_clip/zero_shot_metadata.py`) that are optimized for dermatological contexts, providing diverse phrasings to improve robustness across different linguistic expressions of medical concepts.
+* Note: We use specialized prompt templates (`OPENAI_SKIN_TEMPLATES` in [`src/open_clip/zero_shot_metadata.py:120`](src/open_clip/zero_shot_metadata.py#L120)) that are optimized for dermatological contexts, providing diverse phrasings to improve robustness across different linguistic expressions of medical concepts.
+
 
 ```bash
 python src/test.py \
@@ -96,7 +98,9 @@ python src/test.py \
     --model 'hf-hub:xieji-x/MAKE'           # MAKE checkpoint from Hugging Face Hub
 ```
 
-**Concept Annotation** - Evaluates the model's ability to identify clinical and dermascopic features in dermatological images using MAKE.
+
+### Concept Annotation 
+- Evaluates the model's ability to identify clinical and dermascopic features in dermatological images using MAKE.
 
 - **Clinical Concept Annotation**: Identifies visual concepts in clinical dermatological images using the SkinCon dataset with 32 skin conditions and clinical concept annotations.
 
@@ -122,7 +126,8 @@ python concept_annotation/automatic_concept_annotation.py \
     --concept_terms_json "concept_annotation/term_lists/ConceptTerms.json"
 ```
 
-**Cross-Modality Retrieval** - Evaluates the model's ability to retrieve relevant images given text descriptions and vice versa in dermatological contexts.
+### Cross-Modality Retrieval 
+* Evaluates the model's ability to retrieve relevant images given text descriptions and vice versa in dermatological contexts.
 * Metrics: Recall@10, Recall@50, Recall@100
 ```python
 python src/main.py \
