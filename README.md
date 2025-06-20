@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 ## 🚀 Quick start
 Our model is available on Hugging Face for easy access.
-Here we provide a simple example demonstrating zero-shot disease classification using MAKE in just 43 lines of code.
+Here we provide a [simple example](assets/example.ipynb)  demonstrating zero-shot disease classification using MAKE in just 43 lines of code.
 
 
 ## Data Preparation
