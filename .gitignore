@@ -2,3 +2,4 @@ data/
 model_weight/
 logs/
 __pycache__/
+notebook/

@@ -1,21 +1,14 @@
 import warnings
 warnings.filterwarnings("ignore")
 
-import glob
-import logging
-import os
-import re
-import subprocess
 import sys
 import random
-from datetime import datetime
-from functools import partial
+
 from open_clip import get_tokenizer, build_zero_shot_classifier, get_input_dtype, F17K_DISEASE_113_CLASSES, OPENAI_SKIN_TEMPLATES
 from open_clip_train.precision import get_autocast
 
 import numpy as np
 import torch
-from torch import optim
 
 try:
     import wandb
@@ -169,15 +162,6 @@ def main(args):
     args.save_logs = None
     args.wandb = None
 
-    # optionally resume from a checkpoint
-    checkpoint = pt_load(args.resume, map_location='cpu')
-    if 'epoch' in checkpoint:
-        # resuming a train checkpoint w/ epoch and optimizer state
-        sd = checkpoint["state_dict"]
-        if not args.distributed and next(iter(sd.items()))[0].startswith('module'):
-            sd = {k[len('module.'):]: v for k, v in sd.items()}
-        model.load_state_dict(sd)
-
     # initialize datasets
     tokenizer = get_tokenizer(args.model, cache_dir=args.cache_dir)
 
@@ -203,7 +187,7 @@ def main(args):
         use_tqdm=False,
     )
 
-    image_path = args.image_path # "/home/ander/repos/external/OPEN_DermLIP/data/f17k_official/skin_data/38ae30460612ac94983d43be0c065664.jpg"
+    image_path = args.image_path
 
     # Print results nicely
     print_top10_predictions(image_path, model, classifier_f17k_113_disease, tokenizer, 

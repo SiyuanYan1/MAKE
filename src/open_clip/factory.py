@@ -136,7 +136,7 @@ def load_state_dict(
         checkpoint = load_file(checkpoint_path, device=device)
     else:
         try:
-            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=weights_only)
+            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
         except TypeError:
             checkpoint = torch.load(checkpoint_path, map_location=device)
 
