@@ -7,7 +7,6 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 import tqdm
 import warnings
-import torchsnooper
 warnings.filterwarnings("ignore")
 
 def get_transform(n_px):

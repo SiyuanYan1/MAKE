@@ -3,3 +3,4 @@ model_weight/
 logs/
 __pycache__/
 notebook/
+MAKE_zs_dx_data.zip

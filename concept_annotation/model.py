@@ -1,10 +1,8 @@
 import torch
 import torchvision.transforms as T
-import clip
 
 import numpy as np
 import scipy
-import torchsnooper
 
 OPENAI_SKIN_TEMPLATES = (
     lambda c: f'This is a skin image of {c}',
@@ -52,8 +50,6 @@ def get_prompt_embedding(
     if model_api != None and 'open_clip' in model_api:
         import open_clip
         tokenizer = open_clip.factory.get_tokenizer(model_api.replace('open_clip_',''))
-    else:
-        tokenizer = clip.tokenize
 
     # target embedding
     prompt_target = [

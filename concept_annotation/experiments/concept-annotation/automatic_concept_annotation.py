@@ -1,10 +1,17 @@
 import pyrootutils
 import sys
 import os
-root = pyrootutils.setup_root(os.path.abspath("concept_annotation/experiments/concept-annotation/automatic_concept_annotation.py"), pythonpath=True)
-sys.path.append(str(root))
 
+project_root = os.getcwd()
+src_path = os.path.join(project_root, 'src')
+sys.path.insert(0, project_root)
+sys.path.insert(0, src_path)
+
+from src import open_clip
 from concept_annotation.utils import load_concept_list, concept_mapping, concept_prompt_template_list, concept_prompt_ref_list
+from concept_annotation.dataset import *
+from concept_annotation.model import *
+
 import torch
 
 import pandas as pd
@@ -17,8 +24,6 @@ from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore")
 
-from concept_annotation.dataset import *
-from concept_annotation.model import *
 import argparse
 
 def batch_func(batch):
@@ -60,7 +65,6 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     if model_api.startswith('open_clip_'):
-        import open_clip
         model, _, preprocess = open_clip.create_model_and_transforms(model_api.replace('open_clip_', ''))
         
         model = model.to(device)
