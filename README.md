@@ -81,7 +81,6 @@ Once downloaded, your project directory should be organized as follows:
 ## Evaluation
 
 ### Zero-Shot Disease Classification
-* Evaluates the model's ability to classify skin diseases without task-specific training, using only natural language descriptions of disease categories.
 * Metric: Accuracy
 * Note: We use specialized prompt templates (`OPENAI_SKIN_TEMPLATES` in [`src/open_clip/zero_shot_metadata.py:120`](src/open_clip/zero_shot_metadata.py#L120)) that are optimized for dermatological contexts, providing diverse phrasings to improve robustness across different linguistic expressions of medical concepts.
 
@@ -102,12 +101,6 @@ python src/test.py \
 
 
 ### Concept Annotation 
-- Evaluates the model's ability to identify clinical and dermascopic features in dermatological images using MAKE.
-
-- **Clinical Concept Annotation**: Identifies visual concepts in clinical dermatological images using the SkinCon dataset with 32 skin conditions and clinical concept annotations.
-
-- **Dermascopic Concept Annotation**: Recognizes dermascopic concepts(pigment network, blue whitish veil, etc.) using the Derm7pt dataset based on the 7-point checklist.
-
 - Metric: AUROC
 
 ```python
@@ -129,7 +122,6 @@ python concept_annotation/automatic_concept_annotation.py \
 ```
 
 ### Cross-Modality Retrieval 
-* Evaluates the model's ability to retrieve relevant images given text descriptions and vice versa in dermatological contexts.
 * Metrics: Recall@10, Recall@50, Recall@100
 ```python
 python src/main.py \
