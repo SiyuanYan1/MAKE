@@ -1,5 +1,5 @@
 ## Implement Details
-For extracting skin-related knowledge from captions, we use Qwen2-72B with in-context examples from forum and PubMed sources.
+For extracting skin-related knowledge from captions, we use [Qwen/Qwen2-72B-Instruct](https://huggingface.co/Qwen/Qwen2-72B-Instruct) with in-context examples from forum and PubMed sources.
 
 ## Disease Extraction Prompt
 This prompt is designed to extract skin disease terms from clinical descriptions using only terminology present in the input text.
