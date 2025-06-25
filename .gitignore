@@ -2,5 +2,9 @@ data/
 model_weight/
 logs/
 __pycache__/
-notebook/
+notebooks/
 MAKE_zs_dx_data.zip
+test/
+notebook/
+wandb/
+script/test_ws0.sh

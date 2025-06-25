@@ -19,8 +19,8 @@ Dermatological diagnosis represents a complex multimodal challenge that requires
 - 🔍 **Pretraining data** will be available at [Derm1M Repository](https://github.com/SiyuanYan1/Derm1M)
 
 ## Update
-- [x] 20/06/2025: Released the MAKE checkpoint and the evaluation pipeline
-- [ ] Coming Soon: Guidelines for evaluating MAKE on custom datasets
+- [x] 20/06/2025: Released the MAKE checkpoint and the evaluation pipeline.
+- [x] 25/06/2025: Released knowledge-extraction details.
 - [ ] Within 3 weeks: Training code release
 
 ## ⚙️ Environment Preparation
@@ -140,7 +140,8 @@ python src/main.py \
     --csv-caption-key 'caption_zh_polish_en' \        # Column with EN captions
     --model 'hf-hub:xieji-x/MAKE'                    # MAKE checkpoint from Hugging Face
 ```
-
+## Knowledge Extraction
+Please refer to [prompt.md](assets/prompt.md) for more details.
 
 ## Citation
 
