@@ -18,10 +18,12 @@ Dermatological diagnosis represents a complex multimodal challenge that requires
 - 📦 **Code and pretrained model** will be released in this repository
 - 🔍 **Pretraining data** will be available at [Derm1M Repository](https://github.com/SiyuanYan1/Derm1M)
 
-## Update
-- [x] 20/06/2025: Released the MAKE checkpoint and the evaluation pipeline.
-- [x] 25/06/2025: Released knowledge-extraction details.
-- [ ] Within 3 weeks: Training code release
+## Updates
+
+- [x] 01/07/2025: Released DermLIP and DermLIP-PanDerm model weights on Hugging Face.
+- [x] 03/07/2025: Released evaluation code for downstream tasks.
+- [ ] Training code 
+- [ ] Dataset 
 
 ## ⚙️ Environment Preparation
 Setup conda environment (recommended).
