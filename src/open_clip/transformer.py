@@ -433,6 +433,7 @@ class CustomTransformer(nn.Module):
 
 class VisionTransformer(nn.Module):
     output_tokens: torch.jit.Final[bool]
+    patch_embeddings: torch.jit.Final[bool]
 
     def __init__(
             self,
@@ -455,10 +456,12 @@ class VisionTransformer(nn.Module):
             act_layer: Callable = nn.GELU,
             norm_layer: Callable = LayerNorm,
             output_tokens: bool = False,
+            patch_embeddings: bool = False,
     ):
         super().__init__()
         assert pool_type in ('tok', 'avg', 'none')
         self.output_tokens = output_tokens
+        self.patch_embeddings = patch_embeddings
         image_height, image_width = self.image_size = to_2tuple(image_size)
         patch_height, patch_width = self.patch_size = to_2tuple(patch_size)
         self.grid_size = (image_height // patch_height, image_width // patch_width)
@@ -643,6 +646,10 @@ class VisionTransformer(nn.Module):
 
         if self.proj is not None:
             pooled = pooled @ self.proj
+        
+        if self.patch_embeddings:
+            tokens = tokens @ self.proj
+            return pooled, tokens
 
         if self.output_tokens:
             return pooled, tokens

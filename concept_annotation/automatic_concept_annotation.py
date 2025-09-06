@@ -31,7 +31,7 @@ def batch_func(batch):
         image_features = model.encode_image(batch["image"].to(device))
 
     return {
-        "image_features": image_features.detach().cpu(),
+        "image_features": image_features[0].detach().cpu(),
         "metadata": batch["metadata"],
     }
 

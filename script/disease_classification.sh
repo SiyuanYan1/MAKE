@@ -22,6 +22,6 @@ python src/main.py \
 
 # Diagnosis Zero Shot: Infer one image at once time (Classes from F17K.)
 python src/infer.py \
-    --image_path 'data/F17K/images/0a0e21f413499ad85018f7fa0df3efe2.jpg' \
+    --image_path 'data/F17K/images/9ca1e7ab5fa2261ecd1a938b635a228f.jpg' \
     --k 5 \
     --model 'hf-hub:xieji-x/MAKE'

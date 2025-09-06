@@ -4,7 +4,9 @@
         "image_size": 224,
         "layers": 12,
         "width": 768,
-        "patch_size": 16
+        "patch_size": 16,
+        "patch_embeddings": true,
+        "sigma": 0.3
     },
     "text_cfg": {
         "context_length": 77,

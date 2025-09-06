@@ -464,12 +464,43 @@ def parse_args(args):
         action="store_true",
         help='Use SigLip (sigmoid) loss.'
     )
-    
+
     parser.add_argument(
-        "--sample_stratagy",
-        type=str,
-        default='default',
-        help="Options are ['default', 'source_balanced']",
+        "--MKCL",
+        default=False,
+        action="store_true",
+        help='Use Multi-Knowledge Contrastive Learning(MKCL) loss'
+    )
+    parser.add_argument(
+        "--subcaptions",
+        default=False,
+        action="store_true",
+        help='Use subcaptions in MPCL'
+    )
+    parser.add_argument(
+        "--use_disease_specific_weight",
+        default=False,
+        action="store_true",
+        help='Use weight loss'
+    )
+    parser.add_argument(
+        "--lambda_m",
+        type=float,
+        default=1.0,
+        help="weight of Multi-Positive Contrastive Learning(MKCL)"
+    )
+    parser.add_argument(
+        "--lambda_s",
+        type=float,
+        default=0.7,
+        help="weight of Subcaption-Local Region Alignment loss(SLRA)"
+    )
+
+    parser.add_argument(
+        "--num_subcaptions",
+        type=int,
+        default=8,
+        help="Number of subcaption used in MKCL"
     )
     parser.add_argument('--parent-path', type=str, default='',
                         help="parent path.")

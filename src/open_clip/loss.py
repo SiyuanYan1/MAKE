@@ -62,6 +62,171 @@ def gather_features(
 
     return all_image_features, all_text_features
 
+class MKCLLoss(nn.Module):
+    def __init__(
+        self,
+        lambda_m,
+        lambda_s,
+        local_loss=False,
+        gather_with_grad=False,
+        cache_labels=False,
+        rank=0,
+        world_size=1,
+        use_horovod=False,
+        use_disease_specific_weight=False
+    ):
+        super().__init__()
+        self.local_loss = local_loss
+        self.gather_with_grad = gather_with_grad
+        self.cache_labels = cache_labels
+        self.rank = rank
+        self.world_size = world_size
+        self.use_horovod = use_horovod
+        self.prev_num_logits = 0
+        self.labels_cache = {}
+        self.lambda_m = lambda_m
+        self.lambda_s = lambda_s
+        self.use_disease_specific_weight = use_disease_specific_weight
+
+    def get_ground_truth(self, device, num_logits):
+        if self.prev_num_logits != num_logits or device not in self.labels_cache:
+            labels = torch.arange(num_logits, device=device)
+            if self.world_size > 1 and self.local_loss:
+                labels += num_logits * self.rank
+            if self.cache_labels:
+                self.labels_cache[device] = labels
+                self.prev_num_logits = num_logits
+        else:
+            labels = self.labels_cache[device]
+        return labels
+
+    def gather(self, image_features, text_features):
+        if self.world_size > 1:
+            return gather_features(
+                image_features, text_features,
+                self.local_loss, self.gather_with_grad,
+                self.rank, self.world_size, self.use_horovod
+            )
+        return image_features, text_features
+
+    
+    def forward(
+        self,
+        weighted_patch_embeddings_sum, # (B, d)
+        image_features,           # (B, d)
+        text_features,            # (11*B, d)
+        caption_mask,             # (B, 11) => 1=valid, 0=invalid
+        logit_scale,              # scalar or (1,)
+        output_dict=False,
+    ):
+        device = image_features.device
+        B_actual = image_features.shape[0]
+        num_caption = caption_mask.shape[-1]
+
+        B, d = image_features.shape
+
+        # Gather if needed
+        all_image_features, all_text_features = self.gather(image_features, text_features)
+
+        all_text_features_chunks = torch.chunk(all_text_features, num_caption, dim=0)
+        ontology_text_features = all_text_features_chunks[1] if len(all_text_features_chunks) > 1 else None
+
+        # Retreive subcation features
+        if len(all_text_features_chunks) > 3:
+            subcaption_features = torch.concat(all_text_features_chunks[3:], dim=0)
+        else:
+            subcaption_features = None
+        
+        # Compute similarity weight between prototype text features and subcaption text features
+        if self.use_disease_specific_weight:
+            prototype_text_features = ontology_text_features
+            subcaption_similarity = prototype_text_features @ subcaption_features.T
+            subcaption_similarity = subcaption_similarity.reshape(B, -1 , B)
+            subcaption_indices = torch.arange(B)
+            subcaption_similarity = subcaption_similarity[subcaption_indices, :, subcaption_indices] 
+
+            # Apply subcaption mask
+            subcaption_mask = caption_mask[:, 3:]
+            subcaption_similarity = torch.masked_fill(subcaption_similarity, subcaption_mask == 0, float('-inf'))
+            
+            subcaption_similarity = F.softmax(subcaption_similarity, dim=-1) # convert to weight
+
+            # Scaling
+            scaler = torch.max(subcaption_similarity, dim=1)[0].unsqueeze(dim=-1)
+            subcaption_similarity = subcaption_similarity / scaler
+
+            # Get ontology mask to mask invalid row
+            ontology_mask = caption_mask[:, 1].unsqueeze(dim=1).repeat(1, subcaption_similarity.shape[-1])
+            subcaption_similarity = torch.masked_fill(subcaption_similarity, ontology_mask == 0, 1)
+
+            # concate one-mask for origin_caption, ontology_caption, visiual_concept_caption
+            ones_mask = torch.ones([B, 3], device=subcaption_similarity.device) 
+            subcaption_similarity = torch.concat([ones_mask, subcaption_similarity], dim=1)
+            subcaption_similarity_1d = subcaption_similarity.reshape(-1)
+            
+            # Disable gradient on subcaition_similarity_1d
+            subcaption_similarity_1d = subcaption_similarity_1d.detach()
+            subcaption_similarity_1d.requires_grad_(False)
+        else:
+            subcaption_similarity_1d = None
+
+        # Compute logits
+        if self.local_loss:
+            logits_per_image = logit_scale * (image_features @ all_text_features.T)
+            logits_sgl = logit_scale * (weighted_patch_embeddings_sum @ all_text_features.T)
+            logits_per_text = logit_scale * (text_features @ all_image_features.T)
+        else:
+            logits_per_image = logit_scale * (all_image_features @ all_text_features.T)
+            logits_per_text = logits_per_image.T
+
+        T = logits_per_image.shape[1]
+
+        # If single-positive scenario
+        if T == B_actual:
+            labels = self.get_ground_truth(device, B_actual)
+            loss = 0.5 * (
+                F.cross_entropy(logits_per_image, labels)
+                + F.cross_entropy(logits_per_text, labels)
+            )
+            return {"contrastive_loss": loss} if output_dict else loss
+
+        # Multi-positive scenario
+        # (A) Image -> Text
+        expanded_i2t = logits_per_image.unsqueeze(1).expand(-1, num_caption, -1).reshape(B_actual * num_caption, T)
+        expanded_sgl = logits_sgl.unsqueeze(1).expand(-1, num_caption, -1).reshape(B_actual * num_caption, T)
+
+        labels_i2t = torch.arange(B_actual * num_caption, device=device)
+        # This mask is used to mask invalid captions
+        mask_1d = caption_mask.view(-1)
+        for idx in range(B_actual * num_caption):
+            if mask_1d[idx].item() < 0.5:
+                labels_i2t[idx] = -100
+        
+        # loss_i2t = F.cross_entropy(expanded_i2t, labels_i2t, ignore_index=-100)
+        loss_i2t = F.cross_entropy(expanded_i2t, labels_i2t, ignore_index=-100, weight=subcaption_similarity_1d)
+
+        # Mask ontology caption loss part
+        label_sgl = labels_i2t.clone() 
+        label_sgl[:B_actual] = -100 # Mask original caption part
+
+        slra_loss = F.cross_entropy(expanded_sgl, label_sgl, ignore_index=-100, weight=subcaption_similarity_1d)
+
+        # (B) Text -> Image
+        labels_t2i = torch.empty(T, device=device, dtype=torch.long)
+        for r in range(T):
+            i = r // num_caption
+            if mask_1d[r].item() < 0.5:
+                labels_t2i[r] = -100
+            else:
+                labels_t2i[r] = i
+        loss_t2i = F.cross_entropy(logits_per_text, labels_t2i, ignore_index=-100)
+
+        MKCL_loss = 0.5 * (loss_i2t + loss_t2i)
+
+        total_loss = self.lambda_m*MKCL_loss + self.lambda_s*slra_loss
+
+        return {"muti-knowledges-contrastive-loss": MKCL_loss* self.lambda_m,
+                "subcaption-local-region-alignment-loss": slra_loss*self.lambda_s} if output_dict else total_loss
 
 class ClipLoss(nn.Module):
 

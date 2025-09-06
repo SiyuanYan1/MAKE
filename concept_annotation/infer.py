@@ -21,7 +21,7 @@ import argparse
 
 def batch_func(batch):
     with torch.no_grad():
-        image_features = model.encode_image(batch["image"].to(device))
+        image_features = model.encode_image(batch["image"].to(device))[0]
 
     return {
         "image_features": image_features.detach().cpu(),

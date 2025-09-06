@@ -21,8 +21,6 @@ from .timm_model import TimmModel
 from .transformer import LayerNormFp32, LayerNorm, QuickGELU, Attention, VisionTransformer, TextTransformer,\
     text_global_pool
 from .utils import to_2tuple
-from CAE.models.modeling_finetune import VisionTransformer as CAEVisionTransformer
-from CAE.models.modeling_cae import ContextAutoencoderViT
 
 
 @dataclass
@@ -44,6 +42,8 @@ class CLIPVisionCfg:
     final_ln_after_pool: bool = False  # apply final LayerNorm after pooling
     pool_type: str = 'tok'
     output_tokens: bool = False
+    patch_embeddings: bool = False
+    sigma: int = None
     act_kwargs: Optional[dict] = None
     norm_kwargs: Optional[dict] = None
 
@@ -169,6 +169,7 @@ def _build_vision_tower(
             output_dim=embed_dim,
             act_layer=act_layer,
             norm_layer=norm_layer,
+            patch_embeddings=vision_cfg.patch_embeddings
         )
 
     return visual
@@ -239,7 +240,8 @@ class CLIP(nn.Module):
         self.output_dict = output_dict
 
         self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype) 
-        # self.visual = _build_CAE_visiontower()
+        self.visual.patch_embeddings = True
+        self.sigma = vision_cfg.sigma if hasattr(vision_cfg, 'sigma') else None
 
         text = _build_text_tower(embed_dim, text_cfg, quick_gelu, cast_dtype)
         self.transformer = text.transformer
@@ -268,8 +270,8 @@ class CLIP(nn.Module):
         self.transformer.grad_checkpointing = enable
 
     def encode_image(self, image, normalize: bool = False):
-        features = self.visual(image)
-        return F.normalize(features, dim=-1) if normalize else features
+        features, patch_embeddings = self.visual(image)
+        return F.normalize(features, dim=-1), F.normalize(patch_embeddings, dim=-1) if normalize else features, patch_embeddings
 
     def encode_text(self, text, normalize: bool = False):
         cast_dtype = self.transformer.get_cast_dtype()
@@ -289,7 +291,7 @@ class CLIP(nn.Module):
         return F.normalize(x, dim=-1) if normalize else x
 
     def get_logits(self, image, text):
-        image_features = self.encode_image(image, normalize=True)
+        image_features, _ = self.encode_image(image, normalize=True)
         text_features = self.encode_text(text, normalize=True)
         image_logits = self.logit_scale.exp() * image_features @ text_features.T
         if self.logit_bias is not None:
@@ -301,15 +303,42 @@ class CLIP(nn.Module):
             self,
             image: Optional[torch.Tensor] = None,
             text: Optional[torch.Tensor] = None,
+            infer=False
     ):
         image_features = self.encode_image(image, normalize=True) if image is not None else None
-        text_features = self.encode_text(text, normalize=True) if text is not None else None
+        if text is not None:
+            B, N, D = text.shape
+            text = text.reshape(B*N, D)
+            text_features = self.encode_text(text, normalize=True) if text is not None else None
+        else:
+            text_features = None
+        
+        weighted_patch_embeddings_sum = None
+
+        if image_features is not None and not infer:
+            image_features, patch_embeddings = image_features[0], image_features[1]
+        else:
+            image_features = image_features[0]
+
+        if image_features is not None and text_features is not None:
+            similarity_matrix = patch_embeddings @ text_features.T
+            embedding_weight = (similarity_matrix >= self.sigma)*similarity_matrix
+
+            # each text only focus on a few visual tokens
+            indices = torch.arange(B, device=embedding_weight.device)
+            visual_token_weights = embedding_weight[indices, :, indices]
+            visual_token_weights = F.normalize(visual_token_weights, dim=-1)
+
+            # weight patch embedding
+            weighted_patch_embeddings = visual_token_weights.unsqueeze(-1) * patch_embeddings
+            weighted_patch_embeddings_sum = weighted_patch_embeddings.sum(dim=1)
 
         if self.output_dict:
             out_dict = {
                 "image_features": image_features,
                 "text_features": text_features,
-                "logit_scale": self.logit_scale.exp()
+                "logit_scale": self.logit_scale.exp(),
+                "weighted_patch_embeddings_sum": weighted_patch_embeddings_sum
             }
             if self.logit_bias is not None:
                 out_dict['logit_bias'] = self.logit_bias
@@ -336,6 +365,7 @@ class CustomTextCLIP(nn.Module):
     ):
         super().__init__()
         self.output_dict = output_dict
+        self.sigma = 0.0
         self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype)
         self.text = _build_text_tower(embed_dim, text_cfg, quick_gelu, cast_dtype)
         self.context_length = self.text.context_length
@@ -359,8 +389,8 @@ class CustomTextCLIP(nn.Module):
         self.text.set_grad_checkpointing(enable)
 
     def encode_image(self, image, normalize: bool = False):
-        features = self.visual(image)
-        return F.normalize(features, dim=-1) if normalize else features
+        features, patch_embeddings = self.visual(image)
+        return F.normalize(features, dim=-1), F.normalize(patch_embeddings, dim=-1) if normalize else features, patch_embeddings
 
     def encode_text(self, text, normalize: bool = False):
         features = self.text(text)
@@ -382,12 +412,31 @@ class CustomTextCLIP(nn.Module):
     ):
         image_features = self.encode_image(image, normalize=True) if image is not None else None
         text_features = self.encode_text(text, normalize=True) if text is not None else None
+        weighted_patch_embeddings_sum = None
+
+        if image_features is not None:
+            image_features, patch_embeddings = image_features[0], image_features[1]
+            B, N, D = patch_embeddings.shape[0], patch_embeddings.shape[1], patch_embeddings[2]
+
+        if image_features is not None and text_features is not None:
+            similarity_matrix = patch_embeddings @ text_features.T
+            embedding_weight = (similarity_matrix >= self.sigma)*similarity_matrix
+
+            # each text only focus on a few visual tokens
+            indices = torch.arange(B, device=embedding_weight.device)
+            visual_token_weights = embedding_weight[indices, :, indices]
+            visual_token_weights = F.normalize(visual_token_weights, dim=-1)
+
+            # weight patch embedding
+            weighted_patch_embeddings = visual_token_weights.unsqueeze(-1) * patch_embeddings
+            weighted_patch_embeddings_sum = weighted_patch_embeddings.sum(dim=1)
 
         if self.output_dict:
             out_dict = {
                 "image_features": image_features,
                 "text_features": text_features,
-                "logit_scale": self.logit_scale.exp()
+                "logit_scale": self.logit_scale.exp(),
+                "weighted_patch_embeddings_sum": weighted_patch_embeddings_sum
             }
             if self.logit_bias is not None:
                 out_dict['logit_bias'] = self.logit_bias
@@ -486,6 +535,8 @@ def build_model_from_openai_state_dict(
         width=vision_width,
         patch_size=vision_patch_size,
         image_size=image_size,
+        patch_embeddings=True,
+        sigma=0.0
     )
     text_cfg = CLIPTextCfg(
         context_length=context_length,

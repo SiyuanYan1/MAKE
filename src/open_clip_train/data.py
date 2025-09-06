@@ -45,6 +45,65 @@ class CsvDataset(Dataset):
         images = self.transforms(Image.open(str(self.images[idx])))
         texts = self.tokenize([str(self.captions[idx])])[0]
         return images, texts
+    
+class MultiPositiveCsvDataset(Dataset):
+    def __init__(self, input_filename, 
+                       transforms, 
+                       img_key, 
+                       caption_key, 
+                       ontology_cap_key='ontology_caption', 
+                       visual_concept_cap_key='visual_concept_caption', 
+                       subcaption_mask_key='sub_caption_mask',
+                       subcaption_keys=['subcaption_1', 'subcaption_2', 'subcaption_3', 'subcaption_4', 'subcaption_5', 'subcaption_6', 'subcaption_7', 'subcaption_8'],
+                       sep="\t", 
+                       tokenizer=None,
+                       use_subcaptions=True,
+                       num_subcaptions=8):
+        logging.debug(f'Loading csv data from {input_filename}.')
+        df = pd.read_csv(input_filename)
+        self.images = df[img_key].tolist()
+
+        # Read caption
+        self.origin_captions = df[caption_key].tolist()
+        self.ontology_captions = df[ontology_cap_key].tolist()
+        self.visual_concept_captions = df[visual_concept_cap_key].tolist()
+        
+        # set limit on number of caption
+        self.num_subcaptions = num_subcaptions
+        subcaption_keys = subcaption_keys[:num_subcaptions]
+        
+        df[subcaption_keys] = df[subcaption_keys].fillna('')
+        self.subcaptions = df[subcaption_keys].values.tolist()
+        
+        self.caption_masks = df['knowledge_masks'].apply(eval).tolist()
+            
+        self.subcaption_masks = df[subcaption_mask_key].apply(eval).tolist()  # Convert mask strings to lists
+        self.use_subcaptions = use_subcaptions
+
+        self.transforms = transforms
+        logging.debug('Done loading data.')
+
+        self.tokenize = tokenizer
+
+    def __len__(self):
+        return len(self.origin_captions)
+
+    def __getitem__(self, idx):
+        images = self.transforms(Image.open(str(self.images[idx])))
+        origin_texts = self.tokenize([str(self.origin_captions[idx])])[0]
+        ontology_texts = self.tokenize([str(self.ontology_captions[idx])])[0]
+        visual_concept_texts = self.tokenize([str(self.visual_concept_captions[idx])])[0]
+        
+        # Encode subcaption
+        subcaption_texts = self.subcaptions[idx][:self.num_subcaptions]
+        subcaption_texts = self.tokenize(subcaption_texts) # [B, token_dimension]
+
+        if self.use_subcaptions: 
+            caption_mask = torch.Tensor(self.caption_masks[idx] + self.subcaption_masks[idx][:self.num_subcaptions]) # [origin, ontology, visual concept, subcaption 1-8 ]
+        else:
+            caption_mask = torch.Tensor(self.caption_masks[idx]) 
+
+        return images, origin_texts, ontology_texts, visual_concept_texts, subcaption_texts, caption_mask
 
 
 class SharedEpoch:
@@ -446,28 +505,41 @@ def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, tokeni
 def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
-    dataset = CsvDataset(
-        input_filename,
-        preprocess_fn,
-        img_key=args.csv_img_key,
-        caption_key=args.csv_caption_key,
-        sep=args.csv_separator,
-        tokenizer=tokenizer
-    )
+
+    if args.MKCL:
+        dataset = MultiPositiveCsvDataset(
+                input_filename,
+                preprocess_fn,
+                img_key=args.csv_img_key,
+                caption_key=args.csv_caption_key,
+                sep=args.csv_separator,
+                tokenizer=tokenizer,
+                use_subcaptions=args.subcaptions,
+                num_subcaptions=args.num_subcaptions
+        )
+    else:
+        dataset = CsvDataset(
+                input_filename,
+                preprocess_fn,
+                img_key=args.csv_img_key,
+                caption_key=args.csv_caption_key,
+                sep=args.csv_separator,
+                tokenizer=tokenizer
+        )
+
     num_samples = len(dataset)
 
-    if args.sample_stratagy == 'default' or is_train == False:
-        sampler = DistributedSampler(dataset) if args.distributed and is_train else None
-        shuffle = is_train and sampler is None
-        dataloader = DataLoader(
-            dataset,
-            batch_size=args.batch_size,
-            shuffle=shuffle,
-            num_workers=args.workers,
-            pin_memory=True,
-            sampler=sampler,
-            drop_last=is_train,
-        )
+    sampler = DistributedSampler(dataset) if args.distributed and is_train else None
+    shuffle = is_train and sampler is None
+    dataloader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        num_workers=args.workers,
+        pin_memory=True,
+        sampler=sampler,
+        drop_last=is_train,
+    )
 
     dataloader.num_samples = num_samples
     dataloader.num_batches = len(dataloader)

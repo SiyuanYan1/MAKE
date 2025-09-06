@@ -39,7 +39,7 @@ def run(model, classifier, dataloader, num_class, args, metric='f1'):
             true_labels = target.to(torch.int64)
 
             with autocast():
-                output = model(image=images)
+                output = model(image=images, infer=True)
                 image_features = output['image_features'] if isinstance(output, dict) else output[0]
                 logits = 100.0 * image_features @ classifier
                 prediction_softmax = torch.softmax(logits, dim=1)
@@ -57,32 +57,32 @@ def run(model, classifier, dataloader, num_class, args, metric='f1'):
             targets_one_hot.extend(F.one_hot(true_labels, num_classes=num_class).cpu().numpy())
             predictions_probs.extend(prediction_softmax.cpu().numpy())
 
-        # Compute metrics
-        top1_acc = top1_correct / total_samples * 100.0  # Convert back to percentage
-        true_labels_array = np.array(true_labels_list)
-        prediction_labels_array = np.array(prediction_labels_list)
-        targets_array = np.array(targets_one_hot)
-        predictions_array = np.array(predictions_probs)
+            # Compute metrics
+            top1_acc = top1_correct / total_samples * 100.0  # Convert back to percentage
+            true_labels_array = np.array(true_labels_list)
+            prediction_labels_array = np.array(prediction_labels_list)
+            targets_array = np.array(targets_one_hot)
+            predictions_array = np.array(predictions_probs)
 
-        if metric == 'f1':
-            auroc = roc_auc_score(targets_array, predictions_array, multi_class='ovr', average='macro')
-            f1 = f1_score(true_labels_array, prediction_labels_array, average='weighted')
+            if metric == 'f1':
+                auroc = roc_auc_score(targets_array, predictions_array, multi_class='ovr', average='macro')
+                f1 = f1_score(true_labels_array, prediction_labels_array, average='weighted')
 
-            return auroc, f1
-        elif metric == 'acc':
-            top1_acc = accuracy_score(true_labels_array, prediction_labels_array)
-            top5_acc = top_k_accuracy_score(true_labels_array, predictions_array, k=5)
+                return auroc, f1
+            elif metric == 'acc':
+                top1_acc = accuracy_score(true_labels_array, prediction_labels_array)
+                top5_acc = top_k_accuracy_score(true_labels_array, predictions_array, k=5)
 
-            return top1_acc, top5_acc
+                return top1_acc, top5_acc
 
-        elif metric == 'f1+acc':
-            top1_acc = accuracy_score(true_labels_array, prediction_labels_array)
-            wf1 = f1_score(true_labels_array, prediction_labels_array, average='weighted')
-            return top1_acc, wf1
-        elif metric == 'auroc+acc':
-            auroc = roc_auc_score(targets_array, predictions_array, multi_class='ovr', average='macro')
-            acc = accuracy_score(true_labels_array, prediction_labels_array)
-            return auroc, acc
+            elif metric == 'f1+acc':
+                top1_acc = accuracy_score(true_labels_array, prediction_labels_array)
+                wf1 = f1_score(true_labels_array, prediction_labels_array, average='weighted')
+                return top1_acc, wf1
+            elif metric == 'auroc+acc':
+                auroc = roc_auc_score(targets_array, predictions_array, multi_class='ovr', average='macro')
+                acc = accuracy_score(true_labels_array, prediction_labels_array)
+                return auroc, acc
 
 
 def zero_shot_eval(model, data, epoch, args, tokenizer=None):
@@ -131,7 +131,7 @@ def zero_shot_eval(model, data, epoch, args, tokenizer=None):
             device=args.device,
             use_tqdm=True,
         )
-        
+
         classifier_SD_128 = build_zero_shot_classifier(
             model,
             tokenizer=tokenizer,

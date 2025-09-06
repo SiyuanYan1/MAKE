@@ -292,7 +292,6 @@ def image_transform(
     interpolation = interpolation or 'bicubic'
     assert interpolation in ['bicubic', 'bilinear', 'random']
     # NOTE random is ignored for interpolation_mode, so defaults to BICUBIC for inference if set
-
     interpolation_mode = InterpolationMode.BILINEAR if interpolation == 'bilinear' else InterpolationMode.BICUBIC
 
     resize_mode = resize_mode or 'shortest'

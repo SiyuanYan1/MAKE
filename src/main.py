@@ -33,7 +33,7 @@ from open_clip_train.distributed import is_master, init_distributed_device, broa
 from open_clip_train.logger import setup_logging
 from open_clip_train.params import parse_args
 from open_clip_train.scheduler import cosine_lr, const_lr, const_lr_cooldown
-from open_clip_train.train import train_one_epoch, evaluate
+from open_clip_train.train import train_one_epoch, evaluate, multi_pos_train_one_epoch
 from open_clip_train.file_utils import pt_load, check_exists, start_sync_process, remote_sync
 
 
@@ -69,6 +69,7 @@ def get_latest_checkpoint(path: str, remote : bool):
 
 def main(args):
     args = parse_args(args)
+    best_loss = np.inf
 
     if torch.cuda.is_available():
         # This enables tf32 on Ampere GPUs which is only 8% slower than
@@ -430,26 +431,30 @@ def main(args):
 
         model = torch.compile(original_model)
 
+    loss = create_loss(args)
+
     if 'train' not in data:
         # If using int8, convert to inference mode.
         if args.use_bnb_linear is not None:
             from open_clip.utils import convert_int8_model_to_inference_mode
             convert_int8_model_to_inference_mode(model)
         # Evaluate.
-        evaluate(model, data, start_epoch, args, tb_writer=writer, tokenizer=tokenizer)
+        model.sigma = 0
+        evaluate(model, data, start_epoch, args, tb_writer=writer, tokenizer=tokenizer, loss=None)
         return
-
-    loss = create_loss(args)
 
     for epoch in range(start_epoch, args.epochs):
         if is_master(args):
             logging.info(f'Start epoch {epoch}')
 
-        train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=writer)
+        if args.MKCL:
+            multi_pos_train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=writer)
+        else:
+            train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=writer)
         completed_epoch = epoch + 1
 
         if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2')):
-            evaluate(model, data, completed_epoch, args, tb_writer=writer, tokenizer=tokenizer)
+            metrics = evaluate(model, data, completed_epoch, args, tb_writer=writer, tokenizer=tokenizer, loss=loss)
 
         # Saving checkpoints.
         if args.save_logs:
@@ -469,6 +474,14 @@ def main(args):
                     checkpoint_dict,
                     os.path.join(args.checkpoint_path, f"epoch_{completed_epoch}.pt"),
                 )
+            
+            if metrics['MAKE_val_loss'] <= best_loss:
+                    best_loss = metrics['MAKE_val_loss']
+                    torch.save(
+                        checkpoint_dict,
+                        os.path.join(args.checkpoint_path, f"best.pt"))
+                    print(f"Saving best model in epoch {completed_epoch} - val loss {metrics['MAKE_val_loss']}")
+            
             if args.delete_previous_checkpoint:
                 previous_checkpoint = os.path.join(args.checkpoint_path, f"epoch_{completed_epoch - 1}.pt")
                 if os.path.exists(previous_checkpoint):
@@ -501,18 +514,26 @@ def main(args):
 
 def copy_codebase(args):
     from shutil import copytree, ignore_patterns
+    import os
+    
     new_code_path = os.path.join(args.logs, args.name, "code")
     if os.path.exists(new_code_path):
-        print(
+        logging.info(
             f"Error. Experiment already exists at {new_code_path}. Use --name to specify a new experiment."
         )
         return -1
-    print(f"Copying codebase to {new_code_path}")
-    current_code_path = os.path.realpath(__file__)
-    for _ in range(3):
-        current_code_path = os.path.dirname(current_code_path)
-    copytree(current_code_path, new_code_path, ignore=ignore_patterns('log', 'logs', 'wandb'))
-    print("Done copying code.")
+    
+    src_path = os.path.dirname(os.path.realpath(__file__))
+    
+    if not os.path.exists(src_path):
+        logging.info(f"Error: src folder not found at {src_path}")
+        return -1
+    
+    logging.info(f"Copying src folder to {new_code_path}")
+    
+    copytree(src_path, new_code_path, ignore=ignore_patterns('log', 'logs', 'wandb', '__pycache__', '*.pyc'))
+    
+    logging.info("Done copying src folder.")
     return 1
 
 

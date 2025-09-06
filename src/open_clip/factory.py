@@ -14,7 +14,7 @@ from .convert import convert_state_dict
 from .model import CLIP, CustomTextCLIP, convert_weights_to_lp, convert_to_custom_text_state_dict,\
     resize_pos_embed, get_cast_dtype, resize_text_pos_embed, set_model_preprocess_cfg
 from .coca_model import CoCa
-from .loss import ClipLoss, DistillClipLoss, CoCaLoss, SigLipLoss
+from .loss import ClipLoss, DistillClipLoss, CoCaLoss, SigLipLoss, MKCLLoss
 from .pretrained import is_pretrained_cfg, get_pretrained_cfg, download_pretrained,\
     list_pretrained_tags_by_model, download_pretrained_from_hf
 from .transform import image_transform_v2, AugmentationCfg, PreprocessCfg, merge_preprocess_dict, merge_preprocess_kwargs
@@ -136,7 +136,7 @@ def load_state_dict(
         checkpoint = load_file(checkpoint_path, device=device)
     else:
         try:
-            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=weights_only)
         except TypeError:
             checkpoint = torch.load(checkpoint_path, map_location=device)
 
@@ -332,18 +332,7 @@ def create_model(
 
         pretrained_loaded = False
 
-        # if statement for loading pretrained vision encoder
-        if 'PanDerm-base' in model_name:
-            # Load PanDerm-base(CAE) pretrained weight to model vision encoder
-            from .utils import call_PanDerm_base_visual
-            model.visual = call_PanDerm_base_visual(model_cfg["vision_cfg"]["pretrain_path"]).to(device=device)
-
-        elif 'PanDerm-large' in model_name:
-            # Load PanDerm-large(CAE) pretrained weight to model vision encoder
-            from .utils import call_PanDerm_large_visual
-            model.visual = call_PanDerm_large_visual(model_cfg["vision_cfg"]["pretrain_path"]).to(device=device)
-
-        elif pretrained:
+        if pretrained:
             checkpoint_path = ''
             pretrained_cfg = get_pretrained_cfg(model_name, pretrained)
             if pretrained_cfg:
@@ -416,6 +405,18 @@ def create_loss(args):
             rank=args.rank,
             world_size=args.world_size,
         )
+    elif args.MKCL:
+        return MKCLLoss(
+                    lambda_m=args.lambda_m,
+                    lambda_s=args.lambda_s,
+                    local_loss=args.local_loss,
+                    gather_with_grad=args.gather_with_grad,
+                    cache_labels=True,
+                    rank=args.rank,
+                    world_size=args.world_size,
+                    use_horovod=args.horovod,
+                    use_disease_specific_weight=args.use_disease_specific_weight)
+    
     return ClipLoss(
         local_loss=args.local_loss,
         gather_with_grad=args.gather_with_grad,
