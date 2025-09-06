@@ -71,7 +71,6 @@ Once downloaded, your project directory should be organized as follows:
 │   ├── concept_annotation_script_open_clip.sh
 │   └── test.sh
 └── src
-    ├── CAE
     ├── infer.py
     ├── main.py
     ├── open_clip
@@ -82,7 +81,7 @@ Once downloaded, your project directory should be organized as follows:
 ## Training
 * Script: script/pretrain.sh
 * Training data: Our training data will be released in October
-* Hardware requirements: We used one NVIDIA H200 GPU for training (occupied GPU memory during training: 140GB). You can use gradient accumulation during training by setting the **accum-freq** parameter.
+* Hardware requirements: We used one NVIDIA H200 GPU for training (occupied GPU memory during training: 140GB, the training time is around 6h). You can use gradient accumulation during training by setting the **accum-freq** parameter.
 
 ```bash
 python src/main.py \
