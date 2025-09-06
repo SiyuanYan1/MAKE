@@ -21,7 +21,7 @@ Dermatological diagnosis represents a complex multimodal challenge that requires
 ## Update
 - [x] 20/06/2025: Released the MAKE checkpoint and the evaluation pipeline.
 - [x] 25/06/2025: Released knowledge-extraction details.
-- [ ] Within 3 weeks: Training code release 
+- [x] 06/09/2025: Training code release 
 
 ## ⚙️ Environment Preparation
 Setup conda environment (recommended).
@@ -57,6 +57,7 @@ Once downloaded, your project directory should be organized as follows:
 │   ├── term_lists
 │   └── utils.py
 ├── data
+│   ├── pretrain
 │   ├── derm7pt
 │   ├── F17K
 │   ├── PAD
@@ -76,6 +77,41 @@ Once downloaded, your project directory should be organized as follows:
     ├── open_clip
     ├── open_clip_train
     └── test.py
+```
+
+## Training
+* Script: script/pretrain.sh
+* Training data: Our training data will be released in October
+* Hardware requirements: We used one NVIDIA H200 GPU for training (occupied GPU memory during training: 140GB). You can use gradient accumulation during training by setting the **accum-freq** parameter.
+
+```bash
+python src/main.py \
+       --zeroshot-frequency 1 \
+       --train-data=data/pretrain/MAKE_training.csv \
+       --val-data=data/pretrain/MAKE_valid.csv \
+       --csv-caption-key truncated_caption \
+       --csv-label-key label \
+       --aug-cfg scale="(0.4, 1.0)" color_jitter="(0.32, 0.32, 0.32, 0.08)" color_jitter_prob=0.8 gray_scale_prob=0.2 \
+       --csv-img-key filename \
+       --warmup 1500 \
+       --wd=0.1 \
+       --batch-size 2048 \
+       --lr=1e-4 \
+       --epochs=15 \
+       --workers=32 \
+       --model ViT-B-16 \
+       --pretrained OPENAI \
+       --logs logs/ \
+       --local-loss \
+       --grad-checkpointing \
+       --dataset-resampled \
+       --lambda_m 1.0 \ # weights of MKCL(Multi-aspect Knowledge-Image Contrastive Learning) loss
+       --lambda_s 0.7 \ # weights of local alignment loss
+       --MKCL \         # Enable MKCL loss
+       --subcaptions \  # Using splitted subcaptions
+       --use_disease_specific_weight \ # Enable local alignment loss
+       --num_subcaptions 8 \ # The number of subcaption used
+       --save-frequency 15
 ```
 
 ## Evaluation
