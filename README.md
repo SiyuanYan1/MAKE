@@ -2,7 +2,7 @@
 
 [![Arxiv Paper](https://img.shields.io/badge/Arxiv-Paper-red)](https://www.arxiv.org/abs/2505.09372) 
 [![Cite](https://img.shields.io/badge/Cite-BibTeX-blue)](#citation)
-[![Model](https://huggingface.co/xieji-x/MAKE)
+[![Model](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-yellow)](https://huggingface.co/xieji-x/MAKE)
 [![Pretrain Dataset](https://img.shields.io/badge/Dataset-Derm1M-yellow)](https://huggingface.co/datasets/redlessone/Derm1M)
 
 
