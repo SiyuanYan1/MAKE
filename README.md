@@ -13,10 +13,6 @@ Dermatological diagnosis represents a complex multimodal challenge that requires
     <img src="assets/MAKE_Approach.png" width="100%"> <br>
 </p>
 
-## Resources
-
-- 📦 **Code and pretrained model** will be released in this repository
-- 🔍 **Pretraining data** will be available at [Derm1M Repository](https://github.com/SiyuanYan1/Derm1M)
 
 ## Update
 - [x] 20/06/2025: Released the MAKE checkpoint and the evaluation pipeline.
