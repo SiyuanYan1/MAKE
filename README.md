@@ -19,6 +19,13 @@ Dermatological diagnosis represents a complex multimodal challenge that requires
 - [x] 25/06/2025: Released knowledge-extraction details.
 - [x] 06/09/2025: Training code release 
 
+The dataset is available on Hugging Face for non-commercial research purposes under the CC BY-NC-4.0 license. This release differs slightly from the ICCV version, offering improved image quality while preserving comparable model performance.
+
+## 💾 Pretraining Data Access
+
+The dataset is available on [Github](https://github.com/SiyuanYan1/Derm1M/) and [Hugging Face](https://huggingface.co/datasets/redlessone/Derm1M) for **non-commercial research purposes under the CC BY-NC-4.0 license**. 
+
+
 ## ⚙️ Environment Preparation
 Setup conda environment (recommended).
 ```bash
