@@ -20,11 +20,10 @@ Dermatological diagnosis represents a complex multimodal challenge that requires
 - [x] 25/06/2025: Released knowledge-extraction details.
 - [x] 06/09/2025: Training code release 
 
-The dataset is available on Hugging Face for non-commercial research purposes under the CC BY-NC-4.0 license. This release differs slightly from the ICCV version, offering improved image quality while preserving comparable model performance.
 
 ## 💾 Pretraining Data Access
 
-The dataset is available on [Github](https://github.com/SiyuanYan1/Derm1M/) and [Hugging Face](https://huggingface.co/datasets/redlessone/Derm1M) for **non-commercial research purposes under the CC BY-NC-4.0 license**. 
+The dataset is available on [Github](https://github.com/SiyuanYan1/Derm1M/) and [Hugging Face](https://huggingface.co/datasets/redlessone/Derm1M) for **non-commercial research purposes under the CC BY-NC-4.0 license**. This release differs slightly from the ICCV version, offering improved image quality while preserving comparable model performance.
 
 
 ## ⚙️ Environment Preparation
@@ -43,7 +42,7 @@ pip install -r requirements.txt
 
 ## 🚀 Quick start
 Our model is available on Hugging Face for easy access.
-Here we provide a [simple example](assets/example.ipynb)  demonstrating zero-shot disease classification using MAKE in just 43 lines of code.
+Here we provide a [simple example](assets/example.ipynb)  demonstrating zero-shot disease classification using MAKE.
 
 
 ## Data Preparation
@@ -84,7 +83,7 @@ Once downloaded, your project directory should be organized as follows:
 
 ## Training
 * Script: script/pretrain.sh
-* Training data: Our training data will be released in October
+* Training data: [Github](https://github.com/SiyuanYan1/Derm1M/) and [Hugging Face](https://huggingface.co/datasets/redlessone/Derm1M)
 * Hardware requirements: We used one NVIDIA H200 GPU for training (occupied GPU memory during training: 140GB, the training time is around 6h). You can use gradient accumulation during training by setting the **accum-freq** parameter.
 
 ```bash
